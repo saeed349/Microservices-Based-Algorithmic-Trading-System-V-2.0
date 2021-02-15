@@ -46,7 +46,7 @@ services:
             AWS_SECRET_ACCESS_KEY: minio-image-pass    
             MLFLOW_TRACKING_URI: http://mlflow-image:5500        
         ports:    
-            - "1000:8888"
+            - "8888:8888"
 
     
     etl-image:
