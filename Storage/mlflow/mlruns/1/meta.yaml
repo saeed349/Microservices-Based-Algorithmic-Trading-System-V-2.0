@@ -1,0 +1,4 @@
+artifact_location: s3://mlflow-models
+experiment_id: '1'
+lifecycle_stage: active
+name: simple_trading_models

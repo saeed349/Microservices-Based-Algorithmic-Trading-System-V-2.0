@@ -1,0 +1,1 @@
+{"lastUpdate":"2020-01-11T20:15:51.1562939Z","objectsCount":11,"objectsTotalSize":27232783,"objectsSizesHistogram":{"BETWEEN_1024_B_AND_1_MB":4,"BETWEEN_10_MB_AND_64_MB":2,"LESS_THAN_1024_B":5},"bucketsCount":3,"bucketsSizes":{"airflow-files":9350,"mlflow-models":26038732,"model-support-files":1184701}}

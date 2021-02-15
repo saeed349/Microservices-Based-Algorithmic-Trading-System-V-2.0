@@ -1,0 +1,237 @@
+
+version: "3.7"
+services:
+    minio-image:
+        container_name: minio-image
+        build:
+            context: ./dockerfiles/dockerfile_minio
+        restart: always
+        working_dir: "/minio-image/storage"
+        volumes:
+            - ./Storage/minio/storage:/minio-image/storage
+        ports:
+            - "9000:9000"
+        environment:
+            MINIO_ACCESS_KEY: minio-image
+            MINIO_SECRET_KEY: minio-image-pass
+        command: server /minio-image/storage
+
+    mlflow-image:
+        container_name: "mlflow-image"
+        build:
+            context: ./dockerfiles/dockerfile_mlflowserver
+        working_dir: "/mlflow-image"
+        volumes:
+            - ./Storage/mlflow:/mlflow-image
+        environment:
+            MLFLOW_S3_ENDPOINT_URL: http://minio-image:9000
+            AWS_ACCESS_KEY_ID: minio-image
+            AWS_SECRET_ACCESS_KEY: minio-image-pass
+        ports:
+            - "5500:5500"
+        command: mlflow server --host 0.0.0.0 --port 5500 --backend-store-uri /mlflow-image/mlruns 
+
+
+    jupyter-image:
+        container_name: "jupyter-image"
+        build:
+            context: ./dockerfiles/dockerfile_jupyter_notebook
+        volumes:
+            - ./Storage/notebooks:/home/jovyan/work
+            - ./Storage/q_pack:/home/jovyan/work/q_pack
+            - ./Storage/mlflow:/mlflow-image
+        environment:
+            MLFLOW_S3_ENDPOINT_URL: http://minio-image:9000
+            AWS_ACCESS_KEY_ID: minio-image
+            AWS_SECRET_ACCESS_KEY: minio-image-pass    
+            MLFLOW_TRACKING_URI: http://mlflow-image:5500        
+        ports:    
+            - "1000:8888"
+
+    
+    etl-image:
+        container_name: "etl-image"
+        build:
+            context: ./dockerfiles/dockerfile_etl
+        volumes:
+            - ./Storage/etl:/app
+            - ./Storage/q_pack:/app/q_pack
+        environment:
+            MLFLOW_S3_ENDPOINT_URL: http://minio-image:9000
+            AWS_ACCESS_KEY_ID: minio-image
+            AWS_SECRET_ACCESS_KEY: minio-image-pass    
+            MLFLOW_TRACKING_URI: http://mlflow-image:5500 
+            # PORT: '66'       
+        ports:    
+            - "8060:8060"
+        command: gunicorn -c gunicorn_config.py -b :8060 app:app
+
+            
+
+    redis:
+        image: redis
+        restart: always
+        volumes:
+            - redis:/data             
+        
+    postgres_secmaster: 
+        image: postgres
+        restart: always
+        container_name: "my_postgres"
+        ports:
+            - 5431:5431                
+        environment:
+            - SHARED_PASSWORD=password
+            - POSTGRES_PASSWORD=posgres349
+        volumes:
+            - ./Storage/postgress_db/scripts/:/docker-entrypoint-initdb.d/ 
+            - pg_data:/var/lib/postgresql/data
+
+    pgadmin:
+        image : dpage/pgadmin4:4.18
+        container_name: pgadmin
+        environment:
+            PGADMIN_DEFAULT_EMAIL: "guest"
+            PGADMIN_DEFAULT_PASSWORD: "guest"
+            PGADMIN_LISTEN_PORT: 1234
+        volumes:
+            - ./Storage/pgadmin/:/var/lib/pgadmin 
+        ports:
+            - 1234:1234
+        depends_on:
+            - postgres_secmaster
+    
+    postgres:
+        image: postgres
+        container_name: "airflow_postgres"
+        environment:
+            - POSTGRES_USER=airflow
+            - POSTGRES_PASSWORD=airflow
+            - POSTGRES_DB=airflow   
+        volumes:
+            - pg_data_airflow:/var/lib/postgresql/data
+            
+    airflow:
+        image: airflow
+        container_name: "my_airflow"
+        build:
+            context: ./dockerfiles/dockerfile_airflow
+        restart: always
+        depends_on:
+            - postgres
+            - redis
+        environment:
+            - LOAD_EX=n
+            - FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+            - EXECUTOR=Celery
+            # - EXECUTOR=Local
+            - AIRFLOW__WEBSERVER__AUTHENTICATE=True
+            - AIRFLOW__WEBSERVER__AUTH_BACKEND=airflow.contrib.auth.backends.password_auth
+        volumes:
+            - ./Storage/airflow/dags:/usr/local/airflow/dags
+            - ./Storage/q_pack:/usr/local/airflow/dags/q_pack
+        ports:
+            - 8080:8080
+        command: webserver
+        healthcheck:
+            test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+            interval: 30s
+            timeout: 30s
+            retries: 3
+
+    flower:
+        image: airflow
+        restart: always
+        depends_on:
+            - redis
+        environment:
+            - EXECUTOR=Celery
+            - AIRFLOW__WEBSERVER__AUTHENTICATE=True
+            - AIRFLOW__WEBSERVER__AUTH_BACKEND=airflow.contrib.auth.backends.password_auth
+        ports:
+            - "5555:5555"
+        command: flower --basic_auth=user1:password1
+
+    scheduler:
+        image: airflow
+        restart: always
+        depends_on:
+            - airflow
+        volumes:
+            - ./Storage/airflow/dags:/usr/local/airflow/dags
+            - ./Storage/q_pack:/usr/local/airflow/dags/q_pack
+        environment:
+            - LOAD_EX=n
+            - FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+            - EXECUTOR=Celery
+        command: scheduler
+
+    worker:
+        image: airflow
+        restart: always
+        depends_on:
+            - scheduler
+        volumes:
+            - ./Storage/airflow/dags:/usr/local/airflow/dags
+            - ./Storage/q_pack:/usr/local/airflow/dags/q_pack
+
+        environment:
+            - FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+            - EXECUTOR=Celery
+            - C_FORCE_ROOT=true
+        command: worker
+
+
+    dash:
+        container_name: "dash"
+        build:
+            context: ./dockerfiles/dockerfile_dash
+        restart: always
+        ports:
+            - 8050:8050
+            - "5001:5001" # app(debug) port
+            - "3000:3000" # remote debugger attach port
+        depends_on:
+            - postgres
+        volumes:
+            - ./Storage/dash:/app
+            - ./Storage/q_pack:/q_pack
+        environment: 
+            - FLASK_DEBUG=1
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+
+    nginx:
+        image: nginx
+        container_name: "nginx_reverse"
+        volumes:
+            - ./Storage/nginx/:/etc/nginx/
+        ports:
+            - 80:80
+        depends_on:
+            - "jupyter-image"
+            - "airflow"
+            - "mlflow-image"
+            - "pgadmin"
+            - "minio-image"
+        links:
+            - "jupyter-image"
+            - "airflow"
+            - "mlflow-image"
+            - "pgadmin"
+            - "minio-image"
+        restart: always
+
+volumes:
+    pg_data:
+        external: false
+        name: pg_data
+    pg_data_airflow:
+        external: false
+        name: pg_data_airflow
+    redis:
+        external: false
+        name: redis
+
+
+# docker-compose up -d --scale worker=5

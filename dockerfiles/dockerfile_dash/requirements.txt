@@ -1,0 +1,12 @@
+dash
+dash-daq 
+dash-bootstrap-components
+pandas
+requests
+flask-socketio
+ptvsd==4.2.10
+psycopg2
+pandas
+SQLAlchemy==1.3.16
+python-dotenv
+future>=0.18.0
