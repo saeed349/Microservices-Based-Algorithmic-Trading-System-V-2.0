@@ -25,7 +25,7 @@ Now all these changes are made to ensure cross platform compatibility between th
 [Latest Linkedin Article on scaling MBATS to the cloud using Terraform](https://www.linkedin.com/post/edit/6619730514188267520/) <br>
 [Linkedin Article about MBATS](https://www.linkedin.com/post/edit/6619730514188267520/)
 
-![MBATS](public/images/transformation.png)
+![MBATS](public/images/mbatsv2.0.png)
 
      
 ## Quickstart
