@@ -27,7 +27,9 @@ Now all these changes are made to ensure cross platform compatibility between th
 
 ![MBATS](public/images/mbatsv2.0.png)
 
-     
+## Architecture
+
+ ![MBATS](public/images/architecture.png)  
 ## Quickstart
 
 Please use this repository for the infrastructure and for all the Quant Trading business logic use the orignal [MBATS](https://github.com/saeed349/Microservices-Based-Algorithmic-Trading-System) repo. 
