@@ -32,9 +32,9 @@ Now all these changes are made to ensure cross platform compatibility between th
  ![MBATS](public/images/architecture.png)  
 ## Quickstart
 
-Please use this repository for the infrastructure and for all the Quant Trading business logic use the orignal [MBATS](https://github.com/saeed349/Microservices-Based-Algorithmic-Trading-System) repo. 
+Please use this repository for the infrastructure and for all the Quant Trading business logic use the orignal [MBATS](https://github.com/saeed349/Microservices-Based-Algorithmic-Trading-System) repo.  
 
-1. Downlod/Clone the Github Repository 
+1. Downlod/Clone the Github Repository (current)
 2. Run docker compose, to start with 5 celery workers:  
  ```docker-compose -f "docker-compose.yml" up --build -d scale worker=5```  
 First run would take some time as all the Docker base images need to be downloaded.  
