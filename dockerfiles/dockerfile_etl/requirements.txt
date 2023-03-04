@@ -16,3 +16,4 @@ flask_restful
 gunicorn
 twilio
 selenium
+beautifulsoup4
